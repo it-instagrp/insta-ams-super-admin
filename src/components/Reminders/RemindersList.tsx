@@ -16,10 +16,9 @@ import {
 import { colors } from "../../styles/theme";
 import { statusBadgeClass } from "../../lib/statusStyles";
 
-export type { Reminder } from "../../types";
-import type { Reminder } from "../../types";
+import type { ReminderRecord } from "../../services/reminderService";
 
-const typeConfig: Record<Reminder["type"], { icon: LucideIcon; color: string; bg: string }> = {
+const typeConfig: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
   Renewal: { icon: CreditCard, color: colors.primary, bg: colors.primaryLight },
   Trial: { icon: AlertTriangle, color: colors.warning, bg: colors.warningBg },
   Approval: { icon: UserPlus, color: colors.info, bg: colors.infoBg },
@@ -27,13 +26,14 @@ const typeConfig: Record<Reminder["type"], { icon: LucideIcon; color: string; bg
 };
 
 interface RemindersListProps {
-  reminders: Reminder[];
+  reminders: ReminderRecord[];
   onResolve: (id: string) => void;
   onSnooze: (id: string) => void;
-  onDismiss: (id: string) => void;
+  onDelete: (reminder: ReminderRecord) => void;
+  busyId: string | null;
 }
 
-export default function RemindersList({ reminders, onResolve, onSnooze, onDismiss }: RemindersListProps) {
+export default function RemindersList({ reminders, onResolve, onSnooze, onDelete, busyId }: RemindersListProps) {
   if (reminders.length === 0) {
     return <div className="empty-state">No reminders found.</div>;
   }
@@ -41,7 +41,7 @@ export default function RemindersList({ reminders, onResolve, onSnooze, onDismis
   return (
     <div className="space-y-3">
       {reminders.map((reminder) => {
-        const config = typeConfig[reminder.type];
+        const config = typeConfig[reminder.type] ?? { icon: Bell, color: colors.textMuted, bg: colors.primaryLight };
         const Icon = config.icon;
         const isResolved = reminder.status === "Resolved";
 
@@ -66,19 +66,17 @@ export default function RemindersList({ reminders, onResolve, onSnooze, onDismis
 
             <span className={statusBadgeClass(reminder.status)}>{reminder.status}</span>
 
-            {!isResolved && (
-              <div className="flex shrink-0 items-center gap-1">
-                <button onClick={() => onResolve(reminder.id)} title="Mark Resolved" className="btn-ghost rounded-md p-2">
+            <div className="flex shrink-0 items-center gap-1">
+                {!isResolved && <button disabled={busyId === reminder.id} onClick={() => onResolve(reminder.id)} title="Mark Resolved" aria-label={`Resolve ${reminder.title}`} className="btn-ghost rounded-md p-2 disabled:opacity-50">
                   <Check size={16} />
-                </button>
-                <button onClick={() => onSnooze(reminder.id)} title="Snooze" className="btn-ghost rounded-md p-2 hover:text-warning">
+                </button>}
+                {!isResolved && reminder.status !== "Snoozed" && <button disabled={busyId === reminder.id} onClick={() => onSnooze(reminder.id)} title="Snooze" aria-label={`Snooze ${reminder.title}`} className="btn-ghost rounded-md p-2 hover:text-warning disabled:opacity-50">
                   <Clock size={16} />
-                </button>
-                <button onClick={() => onDismiss(reminder.id)} title="Dismiss" className="btn-ghost rounded-md p-2 hover:text-error">
+                </button>}
+                <button disabled={busyId === reminder.id} onClick={() => onDelete(reminder)} title="Delete" aria-label={`Delete ${reminder.title}`} className="btn-ghost rounded-md p-2 hover:text-error disabled:opacity-50">
                   <X size={16} />
                 </button>
               </div>
-            )}
           </div>
         );
       })}

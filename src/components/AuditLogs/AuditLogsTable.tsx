@@ -13,10 +13,9 @@ import {
 } from "lucide-react";
 import { colors } from "../../styles/theme";
 
-export type { AuditLogEntry } from "../../types";
-import type { AuditLogEntry } from "../../types";
+import type { AuditLogRecord } from "../../services/auditLogService";
 
-const categoryConfig: Record<AuditLogEntry["category"], { icon: LucideIcon; color: string; bg: string }> = {
+const categoryConfig: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
   Organization: { icon: Building2, color: colors.primary, bg: colors.primaryLight },
   User: { icon: UserCog, color: colors.info, bg: colors.infoBg },
   License: { icon: CreditCard, color: colors.warning, bg: colors.warningBg },
@@ -25,7 +24,7 @@ const categoryConfig: Record<AuditLogEntry["category"], { icon: LucideIcon; colo
 };
 
 interface AuditLogsTableProps {
-  logs: AuditLogEntry[];
+  logs: AuditLogRecord[];
 }
 
 export default function AuditLogsTable({ logs }: AuditLogsTableProps) {
@@ -51,7 +50,7 @@ export default function AuditLogsTable({ logs }: AuditLogsTableProps) {
             </tr>
           ) : (
             logs.map((log) => {
-              const config = categoryConfig[log.category];
+              const config = categoryConfig[log.category] ?? { icon: ShieldAlert, color: colors.textMuted, bg: colors.primaryLight };
               const Icon = config.icon;
               return (
                 <tr key={log.id} className="table-row">
@@ -71,8 +70,8 @@ export default function AuditLogsTable({ logs }: AuditLogsTableProps) {
                   </td>
                   <td className="table-cell">{log.actor}</td>
                   <td className="table-cell">{log.target}</td>
-                  <td className="table-cell">{log.timestamp}</td>
-                  <td className="px-5 py-4 text-sm text-text-muted">{log.ipAddress}</td>
+                  <td className="table-cell">{Number.isNaN(new Date(log.timestamp).getTime()) ? log.timestamp : new Date(log.timestamp).toLocaleString()}</td>
+                  <td className="px-5 py-4 text-sm text-text-muted">{log.ipAddress || "—"}</td>
                 </tr>
               );
             })

@@ -1,75 +1,99 @@
-/**
- * FILE: pages/AuditLogs.tsx
- * Purpose: Shared UI/data logic for the Master Admin application.
- * NOTE: Keep presentation unchanged when refactoring; move repeated logic into reusable modules.
- */
-// src/pages/AuditLogs.tsx
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AuditLogsFilters from "../components/AuditLogs/AuditLogsFilters";
 import AuditLogsTable from "../components/AuditLogs/AuditLogsTable";
+import { getApiErrorMessage } from "../services/apiClient";
+import { listAuditLogs } from "../services/auditLogService";
+import type { AuditLogPage } from "../services/auditLogService";
 
-import { mockAuditLogs } from "../data/auditData";
-
-const REFERENCE_DATE = new Date(2026, 7, 27);
-
-function parseLogDate(timestamp: string): Date {
-  if (timestamp.startsWith("Today")) return new Date(REFERENCE_DATE);
-  if (timestamp.startsWith("Yesterday")) {
-    const d = new Date(REFERENCE_DATE);
-    d.setDate(d.getDate() - 1);
-    return d;
-  }
-  const datePart = timestamp.split(",").slice(0, 2).join(",").trim();
-  const parsed = new Date(datePart);
-  return isNaN(parsed.getTime()) ? new Date(REFERENCE_DATE) : parsed;
-}
-
-function isWithinRange(timestamp: string, range: string): boolean {
-  if (!range || range === "All time") return true;
-  const days = range === "Last 7 days" ? 7 : range === "Last 30 days" ? 30 : range === "Last 90 days" ? 90 : Infinity;
-  const logDate = parseLogDate(timestamp);
-  const diffDays = (REFERENCE_DATE.getTime() - logDate.getTime()) / (1000 * 60 * 60 * 24);
-  return diffDays <= days;
-}
+const PAGE_SIZE = 20;
 
 export default function AuditLogs() {
+  const [result, setResult] = useState<AuditLogPage | null>(null);
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [actorFilter, setActorFilter] = useState("");
-  const [dateRange, setDateRange] = useState("Last 7 days");
+  const [actor, setActor] = useState("");
+  const [debounced, setDebounced] = useState({ search: "", actor: "" });
+  const [category, setCategory] = useState("");
+  const [dateRange, setDateRange] = useState("30d");
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reload, setReload] = useState(0);
+  const requestVersion = useRef(0);
 
-  const filteredLogs = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return mockAuditLogs.filter((log) => {
-      const matchesSearch =
-        !query ||
-        log.actor.toLowerCase().includes(query) ||
-        log.action.toLowerCase().includes(query) ||
-        log.target.toLowerCase().includes(query);
-      const matchesCategory = !categoryFilter || log.category === categoryFilter;
-      const matchesActor = !actorFilter || log.actor === actorFilter;
-      const matchesDate = isWithinRange(log.timestamp, dateRange);
-      return matchesSearch && matchesCategory && matchesActor && matchesDate;
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced({ search: search.trim(), actor: actor.trim() }), 300);
+    return () => window.clearTimeout(timer);
+  }, [search, actor]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const version = ++requestVersion.current;
+    listAuditLogs({
+      search: debounced.search,
+      actor: debounced.actor,
+      category,
+      dateRange,
+      page,
+      perPage: PAGE_SIZE,
+    }, controller.signal).then((data) => {
+      if (controller.signal.aborted || version !== requestVersion.current) return;
+      setResult(data);
+      setError("");
+      setLoading(false);
+    }).catch((error: unknown) => {
+      if (controller.signal.aborted || version !== requestVersion.current) return;
+      setResult(null);
+      setError(getApiErrorMessage(error, "Could not load audit logs."));
+      setLoading(false);
     });
-  }, [search, categoryFilter, actorFilter, dateRange]);
+    return () => controller.abort();
+  }, [debounced, category, dateRange, page, reload]);
+
+  const changeFilter = (apply: () => void) => {
+    requestVersion.current += 1;
+    setLoading(true);
+    setPage(1);
+    apply();
+  };
+  const refresh = () => {
+    requestVersion.current += 1;
+    setLoading(true);
+    setReload((value) => value + 1);
+  };
+  const totalPages = Math.max(1, Math.ceil((result?.total ?? 0) / PAGE_SIZE));
 
   return (
     <div>
-      <h1 className="page-title">Audit Logs</h1>
-      <p className="section-subtitle">Track all administrative actions across the platform.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="page-title">Audit Logs</h1>
+          <p className="section-subtitle">Track all administrative actions across the platform.</p>
+        </div>
+        <button type="button" onClick={refresh} className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-muted hover:bg-primary-light">Refresh</button>
+      </div>
 
       <div className="mt-6">
         <AuditLogsFilters
           search={search}
-          onSearchChange={setSearch}
-          category={categoryFilter}
-          onCategoryChange={setCategoryFilter}
-          actor={actorFilter}
-          onActorChange={setActorFilter}
+          onSearchChange={(value) => changeFilter(() => setSearch(value))}
+          category={category}
+          onCategoryChange={(value) => changeFilter(() => setCategory(value))}
+          actor={actor}
+          onActorChange={(value) => changeFilter(() => setActor(value))}
           dateRange={dateRange}
-          onDateRangeChange={setDateRange}
+          onDateRangeChange={(value) => changeFilter(() => setDateRange(value))}
         />
-        <AuditLogsTable logs={filteredLogs} />
+        {error && <p role="alert" className="mb-4 rounded-lg border border-error bg-error-bg px-4 py-2 text-sm text-error">{error} <button type="button" onClick={refresh} className="ml-2 underline">Retry</button></p>}
+        {loading ? <div className="empty-state" role="status">Loading audit logs…</div> : !error && <>
+          <AuditLogsTable logs={result?.logs ?? []} />
+          <div className="mt-4 flex items-center justify-between text-sm text-text-muted">
+            <span>{result?.total ?? 0} entries · Page {page} of {totalPages}</span>
+            <div className="flex gap-2">
+              <button type="button" disabled={page <= 1} onClick={() => { setLoading(true); setPage(page - 1); }} className="rounded-lg border border-border px-3 py-1.5 disabled:opacity-50">Previous</button>
+              <button type="button" disabled={page >= totalPages} onClick={() => { setLoading(true); setPage(page + 1); }} className="rounded-lg border border-border px-3 py-1.5 disabled:opacity-50">Next</button>
+            </div>
+          </div>
+        </>}
       </div>
     </div>
   );

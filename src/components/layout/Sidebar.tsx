@@ -15,9 +15,11 @@ import {
   Users,
   ClipboardList,
   ChevronsLeft,
+  Settings,
 } from "lucide-react";
 
 import { useSettings } from "../../context/SettingsContext";
+import { getAuthSession } from "../../services/authService";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -60,6 +62,7 @@ const navigationItems = [
     icon: ClipboardList,
     path: "/audit-logs",
   },
+  { label: "Settings", icon: Settings, path: "/settings" },
 ];
 
 export default function Sidebar({
@@ -249,8 +252,7 @@ export default function Sidebar({
               </p>
 
               <p className="truncate text-xs font-medium text-text-muted">
-                {email ||
-                  "admin@instaattend.com"}
+                {email || getAuthSession()?.email || ""}
               </p>
             </div>
           )}

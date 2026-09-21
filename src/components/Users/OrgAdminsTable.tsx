@@ -5,14 +5,14 @@
  */
 import { MoreVertical, Ban, Trash2, KeyRound, CheckCircle2, Mail } from "lucide-react";
 import { useState } from "react";
-import type { OrgAdmin } from "../../context/AppDataContext";
+import type { AdminRecord } from "../../services/usersAdminService";
 import { statusBadgeClass } from "../../lib/statusStyles";
 
 interface OrgAdminsTableProps {
-  admins: OrgAdmin[];
-  onResetPassword: (admin: OrgAdmin) => void;
-  onToggleSuspend: (admin: OrgAdmin) => void;
-  onRemove: (admin: OrgAdmin) => void;
+  admins: AdminRecord[];
+  onResetPassword: (admin: AdminRecord) => void;
+  onToggleSuspend: (admin: AdminRecord) => void;
+  onRemove: (admin: AdminRecord) => void;
 }
 
 export default function OrgAdminsTable({
@@ -69,7 +69,7 @@ export default function OrgAdminsTable({
                 <td className="table-cell">
                   <span className={statusBadgeClass(admin.status)}>{admin.status}</span>
                 </td>
-                <td className="table-cell">{admin.lastActive}</td>
+                <td className="table-cell">{admin.lastActive && !Number.isNaN(new Date(admin.lastActive).getTime()) ? new Date(admin.lastActive).toLocaleString() : "—"}</td>
                 <td className="relative table-cell text-right">
                   <div className="flex items-center justify-end gap-1">
                     <a href={`mailto:${admin.email}`} title="Contact Admin" className="rounded-md p-1.5 text-text-muted hover:bg-primary-light hover:text-primary-dark">

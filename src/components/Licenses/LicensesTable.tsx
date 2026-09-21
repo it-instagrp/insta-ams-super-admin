@@ -4,19 +4,21 @@
  * NOTE: Keep presentation unchanged when refactoring; move repeated logic into reusable modules.
  */
 import { RefreshCw, Ban, CheckCircle2, Building2 } from "lucide-react";
-import type { License } from "../../context/AppDataContext";
+import type { LicenseRecord } from "../../services/licenseService";
 import { statusBadgeClass } from "../../lib/statusStyles";
-import { getLicenseEffectiveStatus, formatDaysRemaining } from "../../lib/licenseStatus";
+import { formatDaysRemaining } from "../../lib/licenseStatus";
 
 interface LicensesTableProps {
-  licenses: License[];
-  onRenew: (license: License) => void;
-  onToggleCancel: (license: License) => void;
+  licenses: LicenseRecord[];
+  onRenew: (license: LicenseRecord) => void;
+  onToggleCancel: (license: LicenseRecord) => void;
 }
 
 export default function LicensesTable({ licenses, onRenew, onToggleCancel }: LicensesTableProps) {
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    iso && !Number.isNaN(new Date(iso).getTime())
+      ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "—";
 
   return (
     <div className="surface-card-static overflow-hidden">
@@ -40,7 +42,6 @@ export default function LicensesTable({ licenses, onRenew, onToggleCancel }: Lic
             </tr>
           ) : (
             licenses.map((lic) => {
-              const effectiveStatus = getLicenseEffectiveStatus(lic.tier, lic.expiresAt, lic.cancelled);
               return (
                 <tr key={lic.id} className="table-row">
                   <td className="table-cell-primary">
@@ -58,7 +59,7 @@ export default function LicensesTable({ licenses, onRenew, onToggleCancel }: Lic
                     </p>
                   </td>
                   <td className="table-cell">
-                    <span className={statusBadgeClass(effectiveStatus)}>{effectiveStatus}</span>
+                    <span className={statusBadgeClass(lic.status)}>{lic.status || "—"}</span>
                   </td>
                   <td className="table-cell">
                     <div className="flex items-center justify-end gap-1">

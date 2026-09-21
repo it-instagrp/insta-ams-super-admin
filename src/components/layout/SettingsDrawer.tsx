@@ -13,10 +13,7 @@ import {
   Sliders,
 } from "lucide-react";
 
-import ProfileSettings from "../Settings/ProfileSettings";
-import SecuritySettings from "../Settings/SecuritySettings";
-import NotificationSettings from "../Settings/NotificationSettings";
-import PlatformSettings from "../Settings/PlatformSettings";
+import SettingsSection from "../Settings/SettingsSection";
 
 type SettingsTab =
   | "profile"
@@ -133,25 +130,7 @@ export default function SettingsDrawer({
           </div>
 
           <div className="flex-1 overflow-y-auto p-6">
-            {activeTab ===
-              "profile" && (
-              <ProfileSettings />
-            )}
-
-            {activeTab ===
-              "security" && (
-              <SecuritySettings />
-            )}
-
-            {activeTab ===
-              "notifications" && (
-              <NotificationSettings />
-            )}
-
-            {activeTab ===
-              "platform" && (
-              <PlatformSettings />
-            )}
+            <SettingsSection section={activeTab} />
           </div>
         </div>
       </div>

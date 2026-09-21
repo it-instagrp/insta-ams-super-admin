@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useSettings } from "../../context/SettingsContext";
 import SettingsConfirmModal from "./SettingsConfirmModal";
+import { getApiErrorMessage } from "../../services/apiClient";
 
 export default function ProfileSettings() {
   const { settings, updateProfile } = useSettings();
@@ -13,6 +14,9 @@ export default function ProfileSettings() {
   const [form, setForm] = useState(settings.profile);
 
   const [showConfirm, setShowConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<
     Partial<typeof settings.profile>
   >({});
@@ -25,9 +29,15 @@ export default function ProfileSettings() {
       ...prev,
       [field]: value,
     }));
+    setSaved(false);
   };
 
   const handleSaveClick = () => {
+    setError("");
+    if (!form.name.trim() || !/^\S+@\S+\.\S+$/.test(form.email.trim())) {
+      setError("Enter a name and a valid email address.");
+      return;
+    }
     const changes: Partial<typeof settings.profile> = {};
 
     if (form.name !== settings.profile.name) {
@@ -58,11 +68,19 @@ export default function ProfileSettings() {
     setShowConfirm(true);
   };
 
-  const confirmSave = () => {
-    updateProfile(pendingChanges);
-
-    setShowConfirm(false);
-    setPendingChanges({});
+  const confirmSave = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await updateProfile(pendingChanges);
+      setShowConfirm(false);
+      setPendingChanges({});
+      setSaved(true);
+    } catch (error) {
+      setError(getApiErrorMessage(error, "Could not save your profile."));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const cancelSave = () => {
@@ -133,6 +151,8 @@ export default function ProfileSettings() {
           />
         </div>
 
+        {error && !showConfirm && <p role="alert" className="text-sm text-error">{error}</p>}
+        {saved && <p role="status" className="text-sm text-primary-dark">Profile saved.</p>}
         {/* Save */}
         <div className="flex justify-end">
           <button
@@ -151,6 +171,8 @@ export default function ProfileSettings() {
         message="Are you sure you want to save these profile changes? Your updated name and email will be displayed throughout the application."
         onConfirm={confirmSave}
         onCancel={cancelSave}
+        busy={busy}
+        error={error}
       />
     </>
   );

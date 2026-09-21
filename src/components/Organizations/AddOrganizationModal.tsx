@@ -6,11 +6,12 @@
 import { X, Building2, User, Settings, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { DAY_SHORT, DAYS, DEFAULT_WORKING_DAYS, TIMEZONES } from "../../data/appDefaults";
+import { getApiErrorMessage } from "../../services/apiClient";
 
 interface AddOrganizationModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: NewOrgFormData) => void;
+  onSubmit: (data: NewOrgFormData) => Promise<void>;
 }
 
 export interface NewOrgFormData {
@@ -42,6 +43,8 @@ export default function AddOrganizationModal({ open, onClose, onSubmit }: AddOrg
   const [step, setStep] = useState<Step>(1);
   const [formData, setFormData] = useState<NewOrgFormData>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof NewOrgFormData, string>>>({});
+  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   if (!open) return null;
 
@@ -63,6 +66,7 @@ export default function AddOrganizationModal({ open, onClose, onSubmit }: AddOrg
     const e: typeof errors = {};
     if (!formData.name.trim())      e.name      = "Required";
     if (!formData.slug.trim())      e.slug      = "Required";
+    else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(formData.slug.trim())) e.slug = "Use lowercase letters, numbers, and hyphens";
     if (!formData.adminName.trim()) e.adminName = "Required";
     if (!formData.email.trim())     e.email     = "Required";
     else if (!/\S+@\S+\.\S+/.test(formData.email)) e.email = "Enter a valid email";
@@ -70,14 +74,31 @@ export default function AddOrganizationModal({ open, onClose, onSubmit }: AddOrg
     return Object.keys(e).length === 0;
   };
 
-  const handleClose = () => { setStep(1); setErrors({}); setFormData(EMPTY); onClose(); };
+  const validateStep2 = () => {
+    const e: typeof errors = {};
+    if (!Number.isInteger(formData.maxUsers) || formData.maxUsers < 1 || formData.maxUsers > 10000) e.maxUsers = "Enter 1 to 10,000 users";
+    if (formData.workingDays.length === 0) e.workingDays = "Select at least one day";
+    if (!Number.isInteger(formData.workingHours) || formData.workingHours < 1 || formData.workingHours > 24) e.workingHours = "Enter 1 to 24 hours";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
-  const handleConfirmAdd = () => {
-    onSubmit(formData);
-    setFormData(EMPTY);
-    setErrors({});
-    setStep(1);
-    onClose();
+  const handleClose = () => { if (submitting) return; setStep(1); setErrors({}); setSubmitError(""); setFormData(EMPTY); onClose(); };
+
+  const handleConfirmAdd = async () => {
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      await onSubmit(formData);
+      setFormData(EMPTY);
+      setErrors({});
+      setStep(1);
+      onClose();
+    } catch (error) {
+      setSubmitError(getApiErrorMessage(error, "Could not create the organization."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputCls = (field?: keyof NewOrgFormData) =>
@@ -92,7 +113,6 @@ export default function AddOrganizationModal({ open, onClose, onSubmit }: AddOrg
     const rows: [string, string][] = [
       ["Organization", formData.name],
       ["Identifier", formData.slug],
-      ["Logo URL", formData.logoUrl || "—"],
       ["Org Address", formData.orgAddress || "—"],
       ["Admin Name", formData.adminName],
       ["Admin Email", formData.email],
@@ -128,17 +148,18 @@ export default function AddOrganizationModal({ open, onClose, onSubmit }: AddOrg
           </div>
 
           <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
-            <button onClick={() => setStep(2)}
+            {submitError && <p role="alert" className="mr-auto text-sm text-error">{submitError}</p>}
+            <button disabled={submitting} onClick={() => setStep(2)}
               className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-primary-light">
               ← Back
             </button>
-            <button onClick={handleClose}
+            <button disabled={submitting} onClick={handleClose}
               className="rounded-lg border border-error px-4 py-2 text-sm font-medium text-error hover:bg-error-bg">
               Cancel
             </button>
-            <button onClick={handleConfirmAdd}
+            <button disabled={submitting} onClick={handleConfirmAdd}
               className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-dark">
-              Add Organization
+              {submitting ? "Adding…" : "Add Organization"}
             </button>
           </div>
         </div>
@@ -199,14 +220,6 @@ export default function AddOrganizationModal({ open, onClose, onSubmit }: AddOrg
                     className={inputCls("slug")} />
                   {errors.slug && <p className={errCls}>{errors.slug}</p>}
                 </div>
-              </div>
-
-              <div>
-                <label className={labelCls}>Logo URL</label>
-                <input type="url" value={formData.logoUrl}
-                  onChange={(e) => set("logoUrl", e.target.value)}
-                  placeholder="https://example.com/logos/logo.png"
-                  className={inputCls()} />
               </div>
 
               <div>
@@ -271,6 +284,7 @@ export default function AddOrganizationModal({ open, onClose, onSubmit }: AddOrg
                     value={formData.maxUsers}
                     onChange={(e) => set("maxUsers", Number(e.target.value))}
                     className={inputCls()} />
+                  {errors.maxUsers && <p className={errCls}>{errors.maxUsers}</p>}
                 </div>
               </div>
 
@@ -291,6 +305,7 @@ export default function AddOrganizationModal({ open, onClose, onSubmit }: AddOrg
                     );
                   })}
                 </div>
+                {errors.workingDays && <p className={errCls}>{errors.workingDays}</p>}
               </div>
 
               <div>
@@ -302,6 +317,7 @@ export default function AddOrganizationModal({ open, onClose, onSubmit }: AddOrg
                   value={formData.workingHours}
                   onChange={(e) => set("workingHours", Number(e.target.value))}
                   className="mt-2 h-2 w-full cursor-pointer accent-primary" />
+                {errors.workingHours && <p className={errCls}>{errors.workingHours}</p>}
                 <div className="mt-1 flex justify-between text-xs text-text-muted">
                   <span>1h</span><span>12h</span><span>24h</span>
                 </div>
@@ -329,7 +345,7 @@ export default function AddOrganizationModal({ open, onClose, onSubmit }: AddOrg
               Next →
             </button>
           ) : (
-            <button type="button" onClick={() => setStep("confirm")}
+            <button type="button" onClick={() => { if (validateStep2()) setStep("confirm"); }}
               className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-dark">
               Done →
             </button>

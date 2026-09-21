@@ -3,7 +3,7 @@
  * Purpose: Shared UI/data logic for the Master Admin application.
  * NOTE: Keep presentation unchanged when refactoring; move repeated logic into reusable modules.
  */
-import { Filter, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { SearchInput, SelectField } from "../common";
 
 interface OrganizationFiltersProps {
@@ -53,11 +53,8 @@ export default function OrganizationFilters({
         <option value="Monthly">Monthly</option>
         <option value="Quarterly">Quarterly</option>
         <option value="Yearly">Yearly</option>
+        <option value="ENTERPRISE">Enterprise</option>
       </SelectField>
-      <button className="flex h-10 items-center gap-2 rounded-lg border border-border bg-white px-3 text-base text-text-muted hover:bg-primary-light">
-        <Filter size={15} /> More Filters
-      </button>
-      {/* Add Organization button sits right beside More Filters */}
       <button
         onClick={onAddClick}
         className="flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-base font-medium text-white hover:bg-primary-dark"

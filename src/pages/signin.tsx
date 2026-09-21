@@ -5,10 +5,10 @@
  */
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 
-import { setAuthenticated } from "../services/authService";
+import { isAuthenticated, signIn } from "../services/authService";
 
 const loginBgUrl = "Login_background_2.png";
 
@@ -17,6 +17,7 @@ const Login = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -38,40 +39,18 @@ const Login = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setLoginError("Password must be at least 6 characters.");
-      return;
-    }
-
     try {
       setIsLoggingIn(true);
-
-      /*
-       * TEMPORARY LOGIN
-       *
-       * This is only for connecting the Sign In page
-       * to your current frontend project.
-       *
-       * Later, replace this section with your backend
-       * authentication API.
-       */
-
-      await new Promise((resolve) => setTimeout(resolve, 700));
-
-      // Store login state temporarily
-      setAuthenticated(email);
-
-      // Redirect to Master Admin Dashboard
+      await signIn(email, password, remember);
       navigate("/dashboard", { replace: true });
     } catch (error) {
-      console.error("Login failed:", error);
-      setLoginError(
-        "Unable to sign in. Please check your credentials and try again."
-      );
+      setLoginError(error instanceof Error ? error.message : "Unable to sign in.");
     } finally {
       setIsLoggingIn(false);
     }
   };
+
+  if (isAuthenticated()) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className="relative min-h-screen flex items-center justify-center lg:justify-start overflow-hidden">
@@ -301,6 +280,8 @@ const Login = () => {
                 <input
                   type="checkbox"
                   id="remember"
+                  checked={remember}
+                  onChange={(event) => setRemember(event.target.checked)}
                   className="
                     h-4 w-4
                     rounded
@@ -316,17 +297,6 @@ const Login = () => {
                   Remember me
                 </label>
               </div>
-
-              <Link
-                to="/forgot-password"
-                className="
-                  text-sm
-                  text-emerald-600
-                  hover:text-emerald-700
-                "
-              >
-                Forgot password?
-              </Link>
 
             </div>
 
@@ -352,24 +322,6 @@ const Login = () => {
             </button>
 
           </form>
-
-          {/* Register */}
-          <div className="flex justify-center border-t mt-6 pt-4">
-            <p className="text-sm text-gray-500">
-              Don't have an account?{" "}
-
-              <Link
-                to="/register"
-                className="
-                  text-emerald-600
-                  hover:text-emerald-700
-                  font-medium
-                "
-              >
-                Create account
-              </Link>
-            </p>
-          </div>
 
         </div>
 

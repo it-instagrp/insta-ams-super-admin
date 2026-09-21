@@ -15,11 +15,11 @@ import {
 } from "recharts";
 import { colors } from "../../styles/theme";
 
-import { weeklyTrendsData } from "../../data/dashboardData";
+import type { TrendPoint } from "../../services/dashboardService";
 
 
 
-export default function WeeklyTrends() {
+export default function WeeklyTrends({ data }: { data: TrendPoint[] }) {
   return (
     <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
       <div className="mb-4">
@@ -29,9 +29,9 @@ export default function WeeklyTrends() {
         </p>
       </div>
 
-      <div className="h-[200px] w-full">
+      {data.length === 0 ? <p className="py-10 text-sm text-text-muted">No weekly trends available.</p> : <div className="h-[200px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={weeklyTrendsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
@@ -50,6 +50,7 @@ export default function WeeklyTrends() {
           </LineChart>
         </ResponsiveContainer>
       </div>
+      }
     </div>
   );
 }

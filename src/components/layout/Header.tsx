@@ -18,7 +18,7 @@ import {
 import SettingsDrawer from "./SettingsDrawer";
 
 import { useSettings } from "../../context/SettingsContext";
-import { clearAuthentication } from "../../services/authService";
+import { clearAuthentication, getAuthSession } from "../../services/authService";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] =
@@ -142,7 +142,7 @@ export default function Header() {
               </p>
 
               <p className="truncate text-xs text-text-muted">
-                {email}
+                {email || getAuthSession()?.email || ""}
               </p>
             </div>
 

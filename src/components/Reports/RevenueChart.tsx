@@ -14,11 +14,12 @@ import {
 } from "recharts";
 import { colors } from "../../styles/theme";
 
-import { revenueChartData } from "../../data/reportData";
+import type { RevenueReport } from "../../services/reportsService";
 
-
-
-export default function RevenueChart() {
+export default function RevenueChart({ report }: { report: RevenueReport }) {
+  const formatCurrency = (value: number) => new Intl.NumberFormat(undefined, {
+    style: "currency", currency: report.currency, maximumFractionDigits: 0,
+  }).format(value);
   return (
     <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
       <div className="mb-4">
@@ -28,9 +29,9 @@ export default function RevenueChart() {
         </p>
       </div>
 
-      <div className="h-[260px] w-full">
+      {report.points.length === 0 ? <p className="py-10 text-sm text-text-muted">No revenue data for this period.</p> : <div className="h-[260px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={revenueChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <AreaChart data={report.points} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={colors.primary} stopOpacity={0.25} />
@@ -44,11 +45,11 @@ export default function RevenueChart() {
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12 }}
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+              tickFormatter={(value) => formatCurrency(Number(value))}
             />
             <Tooltip
               formatter={(value) => [
-                `$${(typeof value === "number" ? value : Number(value ?? 0)).toLocaleString()}`,
+                formatCurrency(typeof value === "number" ? value : Number(value ?? 0)),
                 "Revenue",
               ]}
               contentStyle={{
@@ -67,6 +68,7 @@ export default function RevenueChart() {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      }
     </div>
   );
 }

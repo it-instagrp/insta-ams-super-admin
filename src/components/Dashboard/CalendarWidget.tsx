@@ -7,7 +7,6 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
-const HIGHLIGHTED_DATES = [5, 12, 18, 23];
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
@@ -28,7 +27,6 @@ export default function CalendarWidget() {
   const goToPrevMonth = () => setViewDate(new Date(year, month - 1, 1));
   const goToNextMonth = () => setViewDate(new Date(year, month + 1, 1));
   const isToday = (day: number) => day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-  const isHighlighted = (day: number) => HIGHLIGHTED_DATES.includes(day);
 
   const blanks = Array.from({ length: firstDay });
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
@@ -56,7 +54,7 @@ export default function CalendarWidget() {
         {days.map((day) => (
           <div key={day} className="flex items-center justify-center py-1">
             <span className={`flex h-7 w-7 items-center justify-center rounded-full ${
-              isToday(day) ? "bg-primary font-semibold text-white" : isHighlighted(day) ? "font-medium text-primary" : "text-text-primary"
+              isToday(day) ? "bg-primary font-semibold text-white" : "text-text-primary"
             }`}>
               {day}
             </span>
@@ -68,10 +66,6 @@ export default function CalendarWidget() {
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-primary" />
           <span>Today</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full border border-primary" />
-          <span>Activity</span>
         </div>
       </div>
     </div>

@@ -11,6 +11,8 @@ interface SettingsConfirmModalProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  busy?: boolean;
+  error?: string;
 }
 
 export default function SettingsConfirmModal({
@@ -19,6 +21,8 @@ export default function SettingsConfirmModal({
   message,
   onConfirm,
   onCancel,
+  busy = false,
+  error = "",
 }: SettingsConfirmModalProps) {
   if (!open) return null;
 
@@ -45,6 +49,7 @@ export default function SettingsConfirmModal({
 
           <button
             type="button"
+            disabled={busy}
             onClick={onCancel}
             className="rounded-md p-1 text-text-muted hover:bg-primary-light hover:text-text-primary"
           >
@@ -52,9 +57,11 @@ export default function SettingsConfirmModal({
           </button>
         </div>
 
+        {error && <p role="alert" className="mt-4 text-sm text-error">{error}</p>}
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
+            disabled={busy}
             onClick={onCancel}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50"
           >
@@ -63,10 +70,11 @@ export default function SettingsConfirmModal({
 
           <button
             type="button"
+            disabled={busy}
             onClick={onConfirm}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
           >
-            Confirm
+            {busy ? "Saving…" : "Confirm"}
           </button>
         </div>
       </div>

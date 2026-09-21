@@ -45,15 +45,7 @@ export default function AuditLogsFilters({
         <option value="Security">Security</option>
       </SelectField>
 
-      <SelectField
-        value={actor}
-        onChange={(e) => onActorChange(e.target.value)}
-        className="h-10 rounded-lg border border-border bg-white px-3 text-base text-text-muted outline-none focus:border-primary"
-      >
-        <option value="">All Actors</option>
-        <option value="Master Admin">Master Admin</option>
-        <option value="System">System</option>
-      </SelectField>
+      <SearchInput widthClass="w-[220px]" value={actor} onChange={(e) => onActorChange(e.target.value)} placeholder="Filter by actor..." />
 
       <div className="flex items-center gap-2">
         <Calendar size={16} className="text-text-muted" />
@@ -62,10 +54,10 @@ export default function AuditLogsFilters({
           onChange={(e) => onDateRangeChange(e.target.value)}
           className="h-10 rounded-lg border border-border bg-white px-3 text-base text-text-muted outline-none focus:border-primary"
         >
-          <option>Last 7 days</option>
-          <option>Last 30 days</option>
-          <option>Last 90 days</option>
-          <option>All time</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="90d">Last 90 days</option>
+          <option value="all">All time</option>
         </SelectField>
       </div>
     </div>

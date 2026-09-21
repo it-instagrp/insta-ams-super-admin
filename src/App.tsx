@@ -35,6 +35,7 @@ import Reports from "./pages/Reports";
 import AuditLogs from "./pages/AuditLogs";
 import Reminders from "./pages/Reminders";
 import Login from "./pages/signin";
+import Settings from "./pages/Settings";
 
 function ProtectedRoute({
   children,
@@ -112,6 +113,7 @@ function App() {
                 path="/reminders"
                 element={<Reminders />}
               />
+              <Route path="/settings" element={<Settings />} />
             </Route>
 
             <Route

@@ -6,7 +6,8 @@
 import { Eye, Ban, Trash2, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import type { Organization } from "../../context/AppDataContext";
+import type { OrganizationRecord } from "../../services/organizationService";
+import { getApiErrorMessage } from "../../services/apiClient";
 
 type ActionType = "suspend" | "delete";
 
@@ -14,13 +15,13 @@ interface ConfirmState {
   orgId: string;
   orgName: string;
   action: ActionType;
-  currentStatus: Organization["status"];
+  currentStatus: string;
 }
 
 interface OrganizationsTableProps {
-  organizations: Organization[];
-  onToggleSuspend: (org: Organization) => void;
-  onDelete: (org: Organization) => void;
+  organizations: OrganizationRecord[];
+  onToggleSuspend: (org: OrganizationRecord) => Promise<void>;
+  onDelete: (org: OrganizationRecord) => Promise<void>;
 }
 
 export default function OrganizationsTable({
@@ -29,18 +30,29 @@ export default function OrganizationsTable({
   onDelete,
 }: OrganizationsTableProps) {
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  const openConfirm = (org: Organization, action: ActionType) => {
+  const openConfirm = (org: OrganizationRecord, action: ActionType) => {
+    setError("");
     setConfirm({ orgId: org.id, orgName: org.name, action, currentStatus: org.status });
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!confirm) return;
     const org = organizations.find((o) => o.id === confirm.orgId);
     if (!org) return;
-    if (confirm.action === "suspend") onToggleSuspend(org);
-    if (confirm.action === "delete") onDelete(org);
-    setConfirm(null);
+    setBusy(true);
+    setError("");
+    try {
+      if (confirm.action === "suspend") await onToggleSuspend(org);
+      if (confirm.action === "delete") await onDelete(org);
+      setConfirm(null);
+    } catch (error) {
+      setError(getApiErrorMessage(error, "Could not update the organization."));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -49,9 +61,10 @@ export default function OrganizationsTable({
         <table className="w-full table-fixed text-left">
           <thead>
             <tr className="table-head-row">
-              <th className="table-head-cell w-[30%] rounded-tl-xl">Organization</th>
-              <th className="table-head-cell w-[20%]">Admin</th>
-              <th className="table-head-cell w-[35%]">Admin Email</th>
+              <th className="table-head-cell w-[25%] rounded-tl-xl">Organization</th>
+              <th className="table-head-cell w-[18%]">Admin</th>
+              <th className="table-head-cell w-[30%]">Admin Email</th>
+              <th className="table-head-cell w-[12%]">Status</th>
               <th className="table-head-cell w-[15%] rounded-tr-xl text-center">Actions</th>
             </tr>
           </thead>
@@ -59,7 +72,7 @@ export default function OrganizationsTable({
           <tbody>
             {organizations.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-5 py-10 text-center text-base text-text-muted">
+                <td colSpan={5} className="px-5 py-10 text-center text-base text-text-muted">
                   No organizations found.
                 </td>
               </tr>
@@ -68,9 +81,9 @@ export default function OrganizationsTable({
                 const suspended = org.status === "Suspended";
                 return (
                   <tr key={org.id} className="table-row">
-                    <td className="table-cell-primary w-[30%]">{org.name}</td>
-                    <td className="table-cell w-[20%]">{org.adminName || "—"}</td>
-                    <td className="table-cell w-[35%]">
+                    <td className="table-cell-primary w-[25%]">{org.name}</td>
+                    <td className="table-cell w-[18%]">{org.adminName || "—"}</td>
+                    <td className="table-cell w-[30%]">
                       {org.email ? (
                         <a href={`mailto:${org.email}`} className="text-primary hover:underline">
                           {org.email}
@@ -79,6 +92,7 @@ export default function OrganizationsTable({
                         "—"
                       )}
                     </td>
+                    <td className="table-cell w-[12%]">{org.status || "—"}</td>
                     <td className="table-cell w-[15%]">
                       <div className="flex items-center justify-center gap-2">
                         <Link
@@ -133,14 +147,17 @@ export default function OrganizationsTable({
                 ? `Restore platform access for ${confirm.orgName}?`
                 : `${confirm.orgName} and all its users will immediately lose access. You can reactivate later.`}
             </p>
+            {error && <p role="alert" className="mt-3 text-sm text-error">{error}</p>}
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
+                disabled={busy}
                 onClick={() => setConfirm(null)}
                 className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-primary-light"
               >
                 Cancel
               </button>
               <button
+                disabled={busy}
                 onClick={handleConfirm}
                 className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
                   confirm.action === "delete" || confirm.currentStatus !== "Suspended"
@@ -148,7 +165,7 @@ export default function OrganizationsTable({
                     : "bg-primary hover:bg-primary-dark"
                 }`}
               >
-                {confirm.action === "delete"
+                {busy ? "Working…" : confirm.action === "delete"
                   ? "Delete"
                   : confirm.currentStatus === "Suspended"
                   ? "Activate"

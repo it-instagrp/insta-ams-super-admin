@@ -5,10 +5,7 @@
  */
 import { useState } from "react";
 import { User, Lock, Bell, Sliders } from "lucide-react";
-import ProfileSettings from "../components/Settings/ProfileSettings";
-import SecuritySettings from "../components/Settings/SecuritySettings";
-import NotificationSettings from "../components/Settings/NotificationSettings";
-import PlatformSettings from "../components/Settings/PlatformSettings";
+import SettingsSection from "../components/Settings/SettingsSection";
 
 type SettingsTab = "profile" | "security" | "notifications" | "platform";
 
@@ -59,10 +56,7 @@ export default function Settings() {
 
         {/* Content */}
         <div className="lg:col-span-3">
-          {activeTab === "profile" && <ProfileSettings />}
-          {activeTab === "security" && <SecuritySettings />}
-          {activeTab === "notifications" && <NotificationSettings />}
-          {activeTab === "platform" && <PlatformSettings />}
+          <SettingsSection section={activeTab} />
         </div>
       </div>
     </div>

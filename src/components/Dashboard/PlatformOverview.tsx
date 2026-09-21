@@ -8,11 +8,11 @@ import {
 } from "recharts";
 import { colors } from "../../styles/theme";
 
-import { platformOverviewData } from "../../data/dashboardData";
+import type { OverviewPoint } from "../../services/dashboardService";
 
 
 
-const PlatformOverview = () => {
+const PlatformOverview = ({ data, period, onPeriodChange }: { data: OverviewPoint[]; period: string; onPeriodChange: (period: string) => void }) => {
   return (
     <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
@@ -23,16 +23,16 @@ const PlatformOverview = () => {
           </p>
         </div>
 
-        <select className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-muted outline-none focus:border-primary">
-          <option>Last 6 months</option>
-          <option>Last 12 months</option>
-          <option>This year</option>
+        <select value={period} onChange={(event) => onPeriodChange(event.target.value)} className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-text-muted outline-none focus:border-primary">
+          <option value="3m">Last 3 months</option>
+          <option value="6m">Last 6 months</option>
+          <option value="12m">Last 12 months</option>
         </select>
       </div>
 
-      <div className="h-[220px] w-full">
+      {data.length === 0 ? <p className="py-10 text-sm text-text-muted">No overview data available for this period.</p> : <div className="h-[220px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={platformOverviewData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
@@ -45,6 +45,7 @@ const PlatformOverview = () => {
           </BarChart>
         </ResponsiveContainer>
       </div>
+      }
 
       <div className="mt-4 flex items-center gap-6 text-sm text-text-muted">
         <div className="flex items-center gap-2">

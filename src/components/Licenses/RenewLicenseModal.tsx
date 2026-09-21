@@ -5,29 +5,36 @@
  */
 import { useState } from "react";
 import { X, ArrowLeft, RefreshCw } from "lucide-react";
-import type { License } from "../../context/AppDataContext";
-import { addBillingCycle, formatDisplayDate } from "../../lib/billingCycle";
+import type { LicenseRecord } from "../../services/licenseService";
+import { getApiErrorMessage } from "../../services/apiClient";
 
 interface RenewLicenseModalProps {
-  license: License;
+  license: LicenseRecord;
   onClose: () => void;
-  onRenew: (id: string, billingCycle: "Monthly") => void;
+  onRenew: (id: string) => Promise<void>;
 }
 
 type Step = "configure" | "confirm";
 
 export default function RenewLicenseModal({ license, onClose, onRenew }: RenewLicenseModalProps) {
   const [step, setStep] = useState<Step>("configure");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   const now = new Date();
   const currentExpiry = new Date(license.expiresAt);
   const isLapsed = license.cancelled || currentExpiry.getTime() < now.getTime();
-  const baseDate = isLapsed ? now : currentExpiry;
-  const previewExpiry = formatDisplayDate(addBillingCycle(baseDate, "Monthly"));
-
-  const handleConfirm = () => {
-    onRenew(license.id, "Monthly");
-    onClose();
+  const handleConfirm = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await onRenew(license.id);
+      onClose();
+    } catch (error) {
+      setError(getApiErrorMessage(error, "Could not renew the license."));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -38,7 +45,7 @@ export default function RenewLicenseModal({ license, onClose, onRenew }: RenewLi
             <h2 className="text-lg font-semibold text-text-primary">Renew License</h2>
             <p className="text-sm text-text-muted">{license.organizationName}</p>
           </div>
-          <button onClick={onClose} className="rounded-md p-1 text-text-muted hover:bg-primary-light hover:text-primary-dark">
+          <button disabled={busy} onClick={onClose} className="rounded-md p-1 text-text-muted hover:bg-primary-light hover:text-primary-dark">
             <X size={18} />
           </button>
         </div>
@@ -90,21 +97,25 @@ export default function RenewLicenseModal({ license, onClose, onRenew }: RenewLi
             <div className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border">
               <Row label="Plan"           value={license.tier} />
               <Row label="Billing Cycle"  value="Monthly" />
-              <Row label="New Expiry Date" value={previewExpiry} />
+              <Row label="Current Expiry Date" value={Number.isNaN(currentExpiry.getTime()) ? "—" : currentExpiry.toLocaleDateString()} />
             </div>
+            <p className="mt-3 text-xs text-text-muted">The server will calculate and return the new expiry date.</p>
+            {error && <p role="alert" className="mt-3 text-sm text-error">{error}</p>}
 
             <div className="mt-6 flex items-center justify-between">
               <button
+                disabled={busy}
                 onClick={() => setStep("configure")}
                 className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-primary-light"
               >
                 <ArrowLeft size={14} /> Back
               </button>
               <button
+                disabled={busy}
                 onClick={handleConfirm}
                 className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-dark"
               >
-                Confirm & Renew
+                {busy ? "Renewing…" : "Confirm & Renew"}
               </button>
             </div>
           </div>

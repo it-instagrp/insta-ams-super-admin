@@ -1,35 +1,36 @@
-/**
- * FILE: components/Reports/PlanDistribution.tsx
- * Purpose: Shared UI/data logic for the Master Admin application.
- * NOTE: Keep presentation unchanged when refactoring; move repeated logic into reusable modules.
- */
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import type { PlanDistributionItem } from "../../services/reportsService";
+import { colors } from "../../styles/theme";
 
-import { planDistributionData } from "../../data/reportData";
+const palette = [colors.primary, colors.info, colors.warning, colors.purple, colors.error];
 
-
-
-export default function PlanDistribution() {
+export default function PlanDistribution({ data }: { data: PlanDistributionItem[] }) {
+  const total = data.reduce((sum, item) => sum + item.count, 0);
   return (
     <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
       <div className="mb-4">
         <h2 className="text-lg font-semibold text-text-primary">Plan Distribution</h2>
         <p className="mt-1 text-sm text-text-muted">Organizations by subscription tier</p>
       </div>
-
-      {/* Single plan — show as a full-width bar with label */}
-      <div className="flex flex-col items-center justify-center py-8 gap-4">
-        <div className="flex h-32 w-32 items-center justify-center rounded-full border-[10px] border-primary bg-primary-light">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-primary">{planDistributionData[0].value}</p>
-            <p className="text-xs text-text-muted">orgs</p>
-          </div>
+      {data.length === 0 ? <p className="py-10 text-sm text-text-muted">No plan data available.</p> : <>
+        <div className="relative h-40 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={data} dataKey="count" nameKey="plan" innerRadius={52} outerRadius={72}>
+                {data.map((item, index) => <Cell key={item.plan} fill={palette[index % palette.length]} />)}
+              </Pie>
+              <Tooltip formatter={(value) => [Number(value ?? 0).toLocaleString(), "Organizations"]} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-lg font-semibold text-text-primary">{total.toLocaleString()}</div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="h-3 w-3 rounded-full bg-primary" />
-          <span className="text-base font-medium text-text-primary">Monthly</span>
-          <span className="text-sm text-text-muted">— 100%</span>
+        <div className="mt-3 space-y-2">
+          {data.map((item, index) => <div key={item.plan} className="flex items-center justify-between gap-2 text-sm">
+            <span className="flex items-center gap-2 text-text-primary"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: palette[index % palette.length] }} />{item.plan}</span>
+            <span className="text-text-muted">{item.count.toLocaleString()} · {item.percentage}%</span>
+          </div>)}
         </div>
-      </div>
+      </>}
     </div>
   );
 }
